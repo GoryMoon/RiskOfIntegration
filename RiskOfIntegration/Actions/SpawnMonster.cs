@@ -137,6 +137,8 @@ namespace RiskOfIntegration.Actions
                 deathRewards.expReward = (uint) ((double) cost * 0.2f * Run.instance.compensatedDifficultyCoefficient);
                 deathRewards.goldReward = (uint) ((double) cost * 0.2f * 2.0 * Run.instance.compensatedDifficultyCoefficient);
             }
+
+            master.GetBody().baseNameToken = From;
         }
 
         private static CombatDirector.EliteTierDef GetTierDef(EliteIndex index)

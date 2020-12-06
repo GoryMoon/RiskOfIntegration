@@ -27,6 +27,8 @@ namespace RiskOfIntegration
             AddAction(typeof(MovePlayer));
             AddAction(typeof(InventoryBomb));
             AddAction(typeof(SpawnMonster));
+            AddAction(typeof(SpawnBoss));
+            AddAction(typeof(CombatShrine));
         }
 
         ~ActionManager()
