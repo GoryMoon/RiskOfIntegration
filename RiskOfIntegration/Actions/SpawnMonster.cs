@@ -130,7 +130,7 @@ namespace RiskOfIntegration.Actions
                 master.inventory.GiveItem(ItemIndex.BoostDamage, Mathf.RoundToInt((GetTierDef(eliteIndex).damageBoostCoefficient -1) * 10));
             }
 
-            var deathRewards = master.GetComponent<DeathRewards>();
+            var deathRewards = master.GetBodyObject().GetComponent<DeathRewards>();
             if (deathRewards)
             {
                 deathRewards.spawnValue = (int) Mathf.Max(1f, cost * 0.2f);
