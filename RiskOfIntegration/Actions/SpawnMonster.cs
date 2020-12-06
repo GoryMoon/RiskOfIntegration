@@ -4,7 +4,9 @@ using Newtonsoft.Json;
 using R2API.Utils;
 using RoR2;
 using UnityEngine;
+using UnityEngine.Networking;
 using Object = UnityEngine.Object;
+using Random = UnityEngine.Random;
 
 namespace RiskOfIntegration.Actions
 {
@@ -32,39 +34,27 @@ namespace RiskOfIntegration.Actions
         {
             if (Utils.GetPlayer(out _, out var player))
             {
+                if (!Enum.TryParse(_team, out TeamIndex teamIndex) || teamIndex == TeamIndex.None || teamIndex == TeamIndex.Count)
+                {
+                    teamIndex = TeamIndex.Monster;
+                }
+                
                 var spawnCard = Utils.GetSpawnCard(_name);
                 if (spawnCard == null)
                 {
-                    ChatMessage.SendColored($"ERROR: Can't find monster with name \"{_name}\"", "#d63031");
-                    return ActionResponse.Done;
-                }
-
-                var director = Object.FindObjectOfType<CombatDirector>();
-                var rng = director.GetFieldValue<Xoroshiro128Plus>("rng");
-
-                for (var i = 0; i < _amount; i++)
-                {
-                    if (!Enum.TryParse(_team, out TeamIndex teamIndex) || teamIndex == TeamIndex.None || teamIndex == TeamIndex.Count)
+                    var masterName= Utils.GetMasterName(_name);
+                    if (masterName == null)
                     {
-                        teamIndex = TeamIndex.Neutral;
+                        ChatMessage.SendColored($"ERROR: Can't find monster with name \"{_name}\"", "#d63031");
+                        return ActionResponse.Done;
                     }
-
-                    var placementRule = new DirectorPlacementRule
-                    {
-                        placementMode = DirectorPlacementRule.PlacementMode.Approximate,
-                        spawnOnTarget = player.transform,
-                        preventOverhead = false,
-                        minDistance = _minDistance,
-                        maxDistance = _maxDistance
-                    };
-                    
-                    DirectorCore.instance.TrySpawnObject(new DirectorSpawnRequest(spawnCard, placementRule, rng)
-                    {
-                        teamIndexOverride = teamIndex,
-                        ignoreTeamMemberLimit = true,
-                        onSpawnedServer = OnCardSpawned
-                    });
+                    SpawnMaster(player, masterName, teamIndex);
                 }
+                else
+                {
+                    SpawnCard(player, spawnCard, teamIndex);
+                }
+
                 ChatMessage.SendColored($"{From} spawned {_amount}x {_name.Replace("Master", string.Empty).Humanize()} on you!", "#d63031");
 
                 return ActionResponse.Done;
@@ -73,9 +63,66 @@ namespace RiskOfIntegration.Actions
             return ActionResponse.Retry;
         }
 
+        private void SpawnMaster(Component player, string masterName, TeamIndex teamIndex)
+        {
+            var masterPrefab = MasterCatalog.FindMasterPrefab(masterName);
+            var body = masterPrefab.GetComponent<CharacterMaster>().bodyPrefab;
+            var location = player.transform.position;
+            
+            for (var i = 0; i < _amount; i++)
+            {
+                var pos = Vector3.forward * Random.Range(-_minDistance, _maxDistance) + Vector3.right * Random.Range(-_minDistance, _maxDistance);
+                var ray = new Ray(location + pos + Vector3.up * 200, Vector3.down);
+                if (Physics.Raycast(ray, out var hit, Mathf.Infinity, LayerIndex.defaultLayer.intVal))
+                {
+                    if (hit.collider != null)
+                    {
+                        pos.y = hit.point.y + 10;
+                    }
+                }
+                var bodyGameObject = Object.Instantiate(masterPrefab, location + pos, Quaternion.identity);
+                var master = bodyGameObject.GetComponent<CharacterMaster>();
+                NetworkServer.Spawn(bodyGameObject);
+                master.SpawnBody(body, bodyGameObject.transform.position, Quaternion.identity);
+                HandleElite(master);
+                
+                master.teamIndex = teamIndex;
+                master.GetBody().teamComponent.teamIndex = teamIndex;
+            }
+        }
+        
+        private void SpawnCard(Component player, SpawnCard spawnCard, TeamIndex teamIndex)
+        {
+            var director = Object.FindObjectOfType<CombatDirector>();
+            var rng = director.GetFieldValue<Xoroshiro128Plus>("rng");
+
+            for (var i = 0; i < _amount; i++)
+            {
+                var placementRule = new DirectorPlacementRule
+                {
+                    placementMode = DirectorPlacementRule.PlacementMode.Approximate,
+                    spawnOnTarget = player.transform,
+                    preventOverhead = false,
+                    minDistance = _minDistance,
+                    maxDistance = _maxDistance
+                };
+                    
+                DirectorCore.instance.TrySpawnObject(new DirectorSpawnRequest(spawnCard, placementRule, rng)
+                {
+                    teamIndexOverride = teamIndex,
+                    ignoreTeamMemberLimit = true,
+                    onSpawnedServer = OnCardSpawned
+                });
+            }
+        }
+
         private void OnCardSpawned(SpawnCard.SpawnResult result)
         {
-            var master = result.spawnedInstance.GetComponent<CharacterMaster>();
+            HandleElite(result.spawnedInstance.GetComponent<CharacterMaster>());
+        }
+
+        private void HandleElite(CharacterMaster master)
+        {
             if (Enum.TryParse<EliteIndex>(_elite, out var eliteIndex) && eliteIndex != EliteIndex.None && eliteIndex != EliteIndex.Count)
             {
                 master.inventory.SetEquipmentIndex(EliteCatalog.GetEliteDef(eliteIndex).eliteEquipmentIndex);
