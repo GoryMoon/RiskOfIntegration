@@ -18,7 +18,7 @@ namespace RiskOfIntegration.Actions
         {
             if (Utils.GetPlayer(out _, out var player))
             {
-                if (_combatShrineManager == null)
+                if (!_combatShrineManager)
                 {
                     var gameObject = new GameObject();
                     gameObject.SetActive(false);
