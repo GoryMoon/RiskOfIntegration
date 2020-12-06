@@ -84,7 +84,7 @@ namespace RiskOfIntegration.Actions
                 var master = bodyGameObject.GetComponent<CharacterMaster>();
                 NetworkServer.Spawn(bodyGameObject);
                 master.SpawnBody(body, bodyGameObject.transform.position, Quaternion.identity);
-                HandleElite(master);
+                HandleSpawned(master, 10);
                 
                 master.teamIndex = teamIndex;
                 master.GetBody().teamComponent.teamIndex = teamIndex;
@@ -118,16 +118,24 @@ namespace RiskOfIntegration.Actions
 
         private void OnCardSpawned(SpawnCard.SpawnResult result)
         {
-            HandleElite(result.spawnedInstance.GetComponent<CharacterMaster>());
+            HandleSpawned(result.spawnedInstance.GetComponent<CharacterMaster>(), result.spawnRequest.spawnCard.directorCreditCost);
         }
 
-        private void HandleElite(CharacterMaster master)
+        private void HandleSpawned(CharacterMaster master, int cost)
         {
             if (Enum.TryParse<EliteIndex>(_elite, out var eliteIndex) && eliteIndex != EliteIndex.None && eliteIndex != EliteIndex.Count)
             {
                 master.inventory.SetEquipmentIndex(EliteCatalog.GetEliteDef(eliteIndex).eliteEquipmentIndex);
                 master.inventory.GiveItem(ItemIndex.BoostHp, Mathf.RoundToInt((GetTierDef(eliteIndex).healthBoostCoefficient -1) * 10));
                 master.inventory.GiveItem(ItemIndex.BoostDamage, Mathf.RoundToInt((GetTierDef(eliteIndex).damageBoostCoefficient -1) * 10));
+            }
+
+            var deathRewards = master.GetComponent<DeathRewards>();
+            if (deathRewards)
+            {
+                deathRewards.spawnValue = (int) Mathf.Max(1f, cost * 0.2f);
+                deathRewards.expReward = (uint) ((double) cost * 0.2f * Run.instance.compensatedDifficultyCoefficient);
+                deathRewards.goldReward = (uint) ((double) cost * 0.2f * 2.0 * Run.instance.compensatedDifficultyCoefficient);
             }
         }
 
