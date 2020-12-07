@@ -1,5 +1,6 @@
 ﻿using System;
 using Newtonsoft.Json;
+using R2API.Utils;
 using RiskOfIntegration.Misc;
 using RoR2;
 using UnityEngine;
@@ -29,7 +30,11 @@ namespace RiskOfIntegration.Actions
                     Object.Instantiate(gameObject);
                 }
 
-                if (_combatShrineManager.RunEffect(player, _baseCredits)) return ActionResponse.Done;
+                if (_combatShrineManager.RunEffect(player, _baseCredits))
+                {
+                    ChatMessage.SendColored($"{From} got you some difficult monsters!", "#d63031");
+                    return ActionResponse.Done;
+                }
                 
                 TryLater(TimeSpan.FromSeconds(5));
                 return ActionResponse.Retry;

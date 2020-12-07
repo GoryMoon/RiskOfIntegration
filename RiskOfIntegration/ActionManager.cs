@@ -29,6 +29,7 @@ namespace RiskOfIntegration
             AddAction(typeof(SpawnMonster));
             AddAction(typeof(SpawnBoss));
             AddAction(typeof(CombatShrine));
+            AddAction(typeof(MountainShrine));
         }
 
         ~ActionManager()
