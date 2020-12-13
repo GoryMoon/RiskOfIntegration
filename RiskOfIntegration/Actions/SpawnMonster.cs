@@ -3,6 +3,7 @@ using Humanizer;
 using Newtonsoft.Json;
 using R2API.Utils;
 using RoR2;
+using RoR2.UI;
 using UnityEngine;
 using UnityEngine.Networking;
 using Object = UnityEngine.Object;
@@ -139,6 +140,26 @@ namespace RiskOfIntegration.Actions
             }
 
             master.GetBody().baseNameToken = From;
+            if (master.bodyPrefab)
+            {
+                master.bodyPrefab.GetComponent<CharacterBody>().baseNameToken = From;
+            }
+            
+            var pingerController = master.gameObject.AddComponent<PingerController>();
+            var pingIndicator = ((GameObject) Object.Instantiate(Resources.Load("Prefabs/PingIndicator"))).GetComponent<PingIndicator>();
+            pingIndicator.pingOwner = pingerController.gameObject;
+            pingIndicator.enemyPingDuration = RiskOfIntegration.PingTime.Value;
+            pingerController.SetFieldValue("pingIndicator", pingIndicator);
+            
+            var body = master.GetBody();
+            var pingInfo = new PingerController.PingInfo
+            {
+                active = true,
+                origin = body.corePosition,
+                normal = Vector3.zero,
+                targetNetworkIdentity = body.networkIdentity
+            };
+            pingerController.CallCmdPing(pingInfo);
         }
 
         private static CombatDirector.EliteTierDef GetTierDef(EliteIndex index)

@@ -72,7 +72,7 @@ namespace RiskOfIntegration
                                         var line = readTask.Result;
                                         if (line != null)
                                         {
-                                            if (Run.instance)
+                                            if (Utils.AnySpawned)
                                             {
                                                 Handle(line);
                                             }

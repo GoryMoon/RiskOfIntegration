@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using RoR2;
@@ -11,10 +12,47 @@ namespace RiskOfIntegration
         private static readonly Dictionary<string, string> NameCache = new Dictionary<string, string>();
         private static readonly List<SpawnCard> SpawnCard = new List<SpawnCard>();
 
+        public static bool AnySpawned { get; private set; }
+
         public static void Init()
         {
             RiskOfIntegration.Instance.Log.LogMessage("Loading all CSC's");
             SpawnCard.AddRange(Resources.LoadAll<CharacterSpawnCard>("SpawnCards/CharacterSpawnCards"));
+            
+            On.RoR2.Stage.RespawnCharacter += (orig, self, master) =>
+            {
+                orig(self, master);
+                if (!self.usePod)
+                {
+                    AnySpawned = true;
+                }
+            };
+            On.RoR2.Stage.Start += (orig, self) =>
+            {
+                AnySpawned = false;
+                orig(self);
+            };
+            On.RoR2.SurvivorPodController.OnPassengerExit += (orig, self, passenger) =>
+            {
+                orig(self, passenger);
+                if (passenger.GetComponent<CharacterBody>())
+                {
+                    AnySpawned = true;
+                }
+            };
+            On.RoR2.Chat.AddMessage_string += (orig, message) =>
+            {
+                if (message.Contains("wants to attack:"))
+                {
+                    var msg = message.Replace(".</style>", "").Split(' ');
+                    var name = msg[msg.Length - 1];
+                    if (message.Contains($"{name} wants to attack: {name}"))
+                    {
+                        return;
+                    }
+                }
+                orig(message);
+            };
         }
 
         public static bool GetPlayer(out NetworkUser networkUser, out CharacterBody characterBody)

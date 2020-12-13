@@ -4,12 +4,11 @@ using BepInEx.Logging;
 using HarmonyLib;
 using R2API.Utils;
 using RiskOfIntegration.Misc;
-using RoR2;
 
 namespace RiskOfIntegration
 {
     [BepInDependency(R2API.R2API.PluginGUID)]
-    [BepInPlugin("se.gory_moon.risk_of_integration", "Stream Integration", "1.0.0")]
+    [BepInPlugin("se.gory_moon.risk_of_integration", "Stream Integration", "1.4.0")]
     public class RiskOfIntegration: BaseUnityPlugin
     {
         public ManualLogSource Log => Logger;
@@ -19,6 +18,7 @@ namespace RiskOfIntegration
         public static RiskOfIntegration Instance { get; private set; }
 
         public static ConfigEntry<bool> TimeScaleQueue;
+        public static ConfigEntry<float> PingTime;
         
         public RiskOfIntegration()
         {
@@ -32,6 +32,7 @@ namespace RiskOfIntegration
         {
             Logger.LogDebug("Starting plugin");
             TimeScaleQueue = Config.Bind("General","TimeScaleQueue", true, "If the timescale action should queue or override previous timescale action");
+            PingTime = Config.Bind("General","PingTime", 1000.0f, "The time to show the monster ping time for, value is in seconds");
             
             IntegrationManager = new IntegrationManager(this, "RiskOfRain");
             ActionManager = new ActionManager(Logger);
@@ -50,7 +51,7 @@ namespace RiskOfIntegration
 
         private void UpdateIntegration()
         {
-            if (!Run.instance) return;
+            if (!Utils.AnySpawned) return;
             IntegrationManager.Update();
             ActionManager.Update();
         }

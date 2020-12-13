@@ -1,4 +1,5 @@
-﻿using R2API.Utils;
+﻿using System;
+using R2API.Utils;
 using RoR2;
 using UnityEngine;
 
@@ -8,7 +9,14 @@ namespace RiskOfIntegration.Actions
     {
         public override ActionResponse Handle()
         {
-            TeleporterInteraction.instance.AddShrineStack();
+            var instance = TeleporterInteraction.instance;
+            if (instance.isCharging || instance.isCharged)
+            {
+                TryLater(TimeSpan.FromSeconds(10));
+                return ActionResponse.Retry;
+            }
+            
+            instance.AddShrineStack();
             if (Utils.GetPlayer(out _, out var player))
             {
                 var component = player.GetComponent<CharacterBody>();
@@ -26,8 +34,9 @@ namespace RiskOfIntegration.Actions
                     scale = 1f,
                     color = new Color(0.7372549f, 0.9058824f, 0.945098f)
                 }, true);
+                return ActionResponse.Done;
             }
-            return ActionResponse.Done;
+            return ActionResponse.Retry;
         }
     }
 }
